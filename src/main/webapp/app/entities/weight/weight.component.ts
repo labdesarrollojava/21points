@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpResponse, HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs/Subscription';
 import { JhiEventManager, JhiParseLinks, JhiAlertService } from 'ng-jhipster';
 
@@ -14,34 +14,38 @@ import { ITEMS_PER_PAGE, Principal } from '../../shared';
 })
 export class WeightComponent implements OnInit, OnDestroy {
 
+currentAccount: any;
     weights: Weight[];
-    currentAccount: any;
+    error: any;
+    success: any;
     eventSubscriber: Subscription;
-    itemsPerPage: number;
+    currentSearch: string;
+    routeData: any;
     links: any;
+    totalItems: any;
+    queryCount: any;
+    itemsPerPage: any;
     page: any;
     predicate: any;
-    queryCount: any;
+    previousPage: any;
     reverse: any;
-    totalItems: number;
-    currentSearch: string;
 
     constructor(
         private weightService: WeightService,
-        private jhiAlertService: JhiAlertService,
-        private eventManager: JhiEventManager,
         private parseLinks: JhiParseLinks,
+        private jhiAlertService: JhiAlertService,
+        private principal: Principal,
         private activatedRoute: ActivatedRoute,
-        private principal: Principal
+        private router: Router,
+        private eventManager: JhiEventManager
     ) {
-        this.weights = [];
         this.itemsPerPage = ITEMS_PER_PAGE;
-        this.page = 0;
-        this.links = {
-            last: 0
-        };
-        this.predicate = 'id';
-        this.reverse = true;
+        this.routeData = this.activatedRoute.data.subscribe((data) => {
+            this.page = data.pagingParams.page;
+            this.previousPage = data.pagingParams.page;
+            this.reverse = data.pagingParams.ascending;
+            this.predicate = data.pagingParams.predicate;
+        });
         this.currentSearch = this.activatedRoute.snapshot && this.activatedRoute.snapshot.params['search'] ?
             this.activatedRoute.snapshot.params['search'] : '';
     }
@@ -49,46 +53,48 @@ export class WeightComponent implements OnInit, OnDestroy {
     loadAll() {
         if (this.currentSearch) {
             this.weightService.search({
+                page: this.page - 1,
                 query: this.currentSearch,
-                page: this.page,
                 size: this.itemsPerPage,
-                sort: this.sort()
-            }).subscribe(
+                sort: this.sort()}).subscribe(
                 (res: HttpResponse<Weight[]>) => this.onSuccess(res.body, res.headers),
                 (res: HttpErrorResponse) => this.onError(res.message)
             );
             return;
         }
         this.weightService.query({
-            page: this.page,
+            page: this.page - 1,
             size: this.itemsPerPage,
-            sort: this.sort()
-        }).subscribe(
+            sort: this.sort()}).subscribe(
             (res: HttpResponse<Weight[]>) => this.onSuccess(res.body, res.headers),
             (res: HttpErrorResponse) => this.onError(res.message)
         );
     }
-
-    reset() {
-        this.page = 0;
-        this.weights = [];
-        this.loadAll();
+    loadPage(page: number) {
+        if (page !== this.previousPage) {
+            this.previousPage = page;
+            this.transition();
+        }
     }
-
-    loadPage(page) {
-        this.page = page;
+    transition() {
+        this.router.navigate(['/weight'], {queryParams:
+            {
+                page: this.page,
+                size: this.itemsPerPage,
+                search: this.currentSearch,
+                sort: this.predicate + ',' + (this.reverse ? 'asc' : 'desc')
+    }
+        });
         this.loadAll();
     }
 
     clear() {
-        this.weights = [];
-        this.links = {
-            last: 0
-        };
         this.page = 0;
-        this.predicate = 'id';
-        this.reverse = true;
         this.currentSearch = '';
+        this.router.navigate(['/weight', {
+            page: this.page,
+            sort: this.predicate + ',' + (this.reverse ? 'asc' : 'desc')
+        }]);
         this.loadAll();
     }
 
@@ -96,14 +102,13 @@ export class WeightComponent implements OnInit, OnDestroy {
         if (!query) {
             return this.clear();
         }
-        this.weights = [];
-        this.links = {
-            last: 0
-        };
         this.page = 0;
-        this.predicate = '_score';
-        this.reverse = false;
         this.currentSearch = query;
+        this.router.navigate(['/weight', {
+            search: this.currentSearch,
+            page: this.page,
+            sort: this.predicate + ',' + (this.reverse ? 'asc' : 'desc')
+        }]);
         this.loadAll();
     }
     ngOnInit() {
@@ -122,7 +127,7 @@ export class WeightComponent implements OnInit, OnDestroy {
         return item.id;
     }
     registerChangeInWeights() {
-        this.eventSubscriber = this.eventManager.subscribe('weightListModification', (response) => this.reset());
+        this.eventSubscriber = this.eventManager.subscribe('weightListModification', (response) => this.loadAll());
     }
 
     sort() {
@@ -136,11 +141,10 @@ export class WeightComponent implements OnInit, OnDestroy {
     private onSuccess(data, headers) {
         this.links = this.parseLinks.parse(headers.get('link'));
         this.totalItems = headers.get('X-Total-Count');
-        for (let i = 0; i < data.length; i++) {
-            this.weights.push(data[i]);
-        }
+        this.queryCount = this.totalItems;
+        // this.page = pagingParams.page;
+        this.weights = data;
     }
-
     private onError(error) {
         this.jhiAlertService.error(error.message, null, null);
     }

@@ -14,6 +14,7 @@ import {
     WeightDeleteDialogComponent,
     weightRoute,
     weightPopupRoute,
+    WeightResolvePagingParams,
 } from './';
 
 const ENTITY_STATES = [
@@ -45,6 +46,7 @@ const ENTITY_STATES = [
     providers: [
         WeightService,
         WeightPopupService,
+        WeightResolvePagingParams,
     ],
     schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
