@@ -78,4 +78,10 @@ export class PreferencesService {
         const copy: Preferences = Object.assign({}, preferences);
         return copy;
     }
+
+    user(): Observable<any> {
+        return this.http.get('api/my-preferences').map((res: Response) => {
+            return res.json();
+        });
+    }
 }

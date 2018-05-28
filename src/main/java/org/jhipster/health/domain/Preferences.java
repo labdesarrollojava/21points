@@ -61,7 +61,7 @@ public class Preferences implements Serializable {
         return this;
     }
 
-    public void setWeeklyGoals(Integer weeklyGoals) {
+    public void setWeeklyGoal(Integer weeklyGoals) {
         this.weeklyGoals = weeklyGoals;
     }
 

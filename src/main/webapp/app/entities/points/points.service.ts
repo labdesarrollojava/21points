@@ -84,4 +84,9 @@ export class PointsService {
             .convertLocalDateToServer(points.date);
         return copy;
     }
+
+    thisWeek(): Observable<any> {
+        return this.http.get('api/points-this-week')
+        .map((res: any) => this.convertResponse(res));
+    }
 }

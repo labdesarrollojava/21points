@@ -5,11 +5,13 @@ import org.jhipster.health.domain.Preferences;
 
 import org.jhipster.health.repository.PreferencesRepository;
 import org.jhipster.health.repository.search.PreferencesSearchRepository;
+import org.jhipster.health.security.SecurityUtils;
 import org.jhipster.health.web.rest.errors.BadRequestAlertException;
 import org.jhipster.health.web.rest.util.HeaderUtil;
 import io.github.jhipster.web.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -101,6 +103,25 @@ public class PreferencesResource {
         }
 
     /**
+     * GET  /my-preferences -> get the current user's preferences.
+     */
+    @GetMapping("/my-preferences")
+    @Timed
+    public ResponseEntity<Preferences> getUserPreferences() {
+        String username = SecurityUtils.getCurrentUserLogin().toString();
+        log.debug("REST request to get Preferences : {}", username);
+        Optional<Preferences> preferences = preferencesRepository.findOneByUserLogin(username);
+
+        if (preferences.isPresent()) {
+            return new ResponseEntity<>(preferences.get(), HttpStatus.OK);
+        } else {
+            Preferences defaultPreferences = new Preferences();
+            defaultPreferences.setWeeklyGoal(10); // default
+            return new ResponseEntity<>(defaultPreferences, HttpStatus.OK);
+        }
+    }
+
+    /**
      * GET  /preferences/:id : get the "id" preferences.
      *
      * @param id the id of the preferences to retrieve
@@ -144,5 +165,4 @@ public class PreferencesResource {
             .stream(preferencesSearchRepository.search(queryStringQuery(query)).spliterator(), false)
             .collect(Collectors.toList());
     }
-
 }

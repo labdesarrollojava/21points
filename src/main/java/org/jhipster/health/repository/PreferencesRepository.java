@@ -1,5 +1,7 @@
 package org.jhipster.health.repository;
 
+import java.util.Optional;
+
 import org.jhipster.health.domain.Preferences;
 import org.springframework.stereotype.Repository;
 
@@ -12,5 +14,5 @@ import org.springframework.data.jpa.repository.*;
 @SuppressWarnings("unused")
 @Repository
 public interface PreferencesRepository extends JpaRepository<Preferences, Long> {
-
+    Optional<Preferences> findOneByUserLogin(String login);
 }

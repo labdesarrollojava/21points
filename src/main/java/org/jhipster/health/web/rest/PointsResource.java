@@ -8,6 +8,8 @@ import org.jhipster.health.repository.search.PointsSearchRepository;
 import org.jhipster.health.web.rest.errors.BadRequestAlertException;
 import org.jhipster.health.web.rest.util.HeaderUtil;
 import org.jhipster.health.web.rest.util.PaginationUtil;
+import org.jhipster.health.web.rest.vm.PointsPerWeek;
+
 import io.github.jhipster.web.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.net.URI;
 import java.net.URISyntaxException;
-
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -73,7 +76,8 @@ public class PointsResource {
         }
         if (!SecurityUtils.isCurrentUserInRole(AuthoritiesConstants.ADMIN)) {
              log.debug("No user passed in, using current user: {}", SecurityUtils.getCurrentUserLogin());
-             points.setUser(userRepository.findOneByLogin(SecurityUtils.getCurrentUserLogin().toString()).get());
+             //points.setUser(userRepository.findOneByLogin(SecurityUtils.getCurrentUserLogin().toString()).get());
+             points.setUser(userRepository.findOneByLogin(SecurityUtils.getCurrentUserLogin().get()).get());
         }
         Points result = pointsRepository.save(points);
         pointsSearchRepository.save(result);
@@ -169,6 +173,33 @@ public class PointsResource {
         Page<Points> page = pointsSearchRepository.search(queryStringQuery(query), pageable);
         HttpHeaders headers = PaginationUtil.generateSearchPaginationHttpHeaders(query, page, "/api/_search/points");
         return new ResponseEntity<>(page.getContent(), headers, HttpStatus.OK);
+    }
+
+    /**
+    * GET /points : get all the points for the current week.
+    */
+    @GetMapping("/points-this-week")
+    @Timed
+    public ResponseEntity<PointsPerWeek> getPointsThisWeek() {
+        // Get current date
+        LocalDate now = LocalDate.now();
+        // Get first day of week
+        LocalDate startOfWeek = now.with(DayOfWeek.MONDAY);
+        // Get last day of week
+        LocalDate endOfWeek = now.with(DayOfWeek.SUNDAY);
+        log.debug("Looking for points between: {} and {}", startOfWeek, endOfWeek);
+        List<Points> points =
+        pointsRepository.findAllByDateBetweenAndUserLogin(
+            startOfWeek, endOfWeek, SecurityUtils.getCurrentUserLogin().toString());
+            return calculatePoints(startOfWeek, points);
+        }
+        private ResponseEntity<PointsPerWeek> calculatePoints(LocalDate startOfWeek,
+            List<Points> points) {
+            Integer numPoints = points.stream()
+                .mapToInt(p -> p.getExercise() + p.getMeals() + p.getAlcohol())
+                .sum();
+            PointsPerWeek count = new PointsPerWeek(startOfWeek, numPoints);
+            return new ResponseEntity<>(count, HttpStatus.OK);
     }
 
 }

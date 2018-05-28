@@ -145,7 +145,7 @@ public class PreferencesResourceIntTest {
     public void checkWeeklyGoalsIsRequired() throws Exception {
         int databaseSizeBeforeTest = preferencesRepository.findAll().size();
         // set the field null
-        preferences.setWeeklyGoals(null);
+        preferences.setWeeklyGoal(null);
 
         // Create the Preferences, which fails.
 
