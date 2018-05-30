@@ -5,9 +5,12 @@ import org.jhipster.health.domain.BloodPressure;
 
 import org.jhipster.health.repository.BloodPressureRepository;
 import org.jhipster.health.repository.search.BloodPressureSearchRepository;
+import org.jhipster.health.security.SecurityUtils;
 import org.jhipster.health.web.rest.errors.BadRequestAlertException;
 import org.jhipster.health.web.rest.util.HeaderUtil;
 import org.jhipster.health.web.rest.util.PaginationUtil;
+import org.jhipster.health.web.rest.vm.BloodPressureByPeriod;
+
 import io.github.jhipster.web.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +24,11 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.net.URI;
 import java.net.URISyntaxException;
-
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
@@ -153,5 +157,26 @@ public class BloodPressureResource {
         HttpHeaders headers = PaginationUtil.generateSearchPaginationHttpHeaders(query, page, "/api/_search/blood-pressures");
         return new ResponseEntity<>(page.getContent(), headers, HttpStatus.OK);
     }
+    
+	/**
+	 * GET /bp-by-days : get all the blood pressure readings by last x days.
+	 */
+	@RequestMapping(value = "/bp-by-days/{days}")
+	@Timed
+	public ResponseEntity<BloodPressureByPeriod> getByDays(@PathVariable int days) {
+		ZonedDateTime rightNow = ZonedDateTime.now();
+		ZonedDateTime daysAgo = rightNow.minusDays(days);
+		List<BloodPressure> readings = bloodPressureRepository
+				.findAllByTimestampBetweenAndUserLoginOrderByTimestampDesc(daysAgo, rightNow,
+						SecurityUtils.getCurrentUserLogin());
+		BloodPressureByPeriod response = new BloodPressureByPeriod("Last " + days + " Days", readings);
+		return new ResponseEntity<>(response, HttpStatus.OK);
+	}
+	
+	private List<BloodPressure> filterByUser(List<BloodPressure> readings) {
+		Stream<BloodPressure> userReadings = readings.stream()
+				.filter(bp -> bp.getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().get()));
+		return userReadings.collect(Collectors.toList());
+	}    
 
 }

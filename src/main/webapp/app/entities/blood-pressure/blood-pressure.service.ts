@@ -51,6 +51,19 @@ export class BloodPressureService {
             .map((res: HttpResponse<BloodPressure[]>) => this.convertArrayResponse(res));
     }
 
+    // last30Days(): Observable<BloodPressure> {
+    //     return this.http.get('api/bp-by-days/30').map((res: Response) => {
+    //         const jsonResponse = res.json();
+    //         this.convertItemFromServer(jsonResponse);
+    //         return jsonResponse;
+    //     });
+    // }
+
+    last30Days(): Observable<HttpResponse<BloodPressure[]>> {
+        return this.http.get<BloodPressure[]>('api/bp-by-days/30', { observe: 'response' })
+            .map((res: HttpResponse<BloodPressure[]>) => this.convertArrayResponse(res));
+    }
+
     private convertResponse(res: EntityResponseType): EntityResponseType {
         const body: BloodPressure = this.convertItemFromServer(res.body);
         return res.clone({body});
