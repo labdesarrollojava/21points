@@ -1,33 +1,33 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { JhiEventManager } from 'ng-jhipster';
-import { Subscription } from 'rxjs/Subscription';
 
 import { Account, LoginModalService, Principal } from '../shared';
-import { PointsService } from '../entities/points';
 import { PreferencesService, Preferences } from '../entities/preferences';
+import { PointsService } from '../entities/points';
 import { BloodPressureService } from '../entities/blood-pressure';
 import { D3ChartService } from './d3-chart.service';
+import { Subscription } from 'rxjs/Subscription';
 
 @Component({
     selector: 'jhi-home',
     templateUrl: './home.component.html',
-    styleUrls: [
-        'home.scss'
-    ]
+    styleUrls: [ 'home.scss']
 
 })
 export class HomeComponent implements OnInit, OnDestroy {
     account: Account;
     modalRef: NgbModalRef;
-    eventSubscriber: Subscription;
+    preferences: Preferences;
     pointsThisWeek: any = {};
     pointsPercentage: number;
     bpReadings: any = {};
     bpOptions: any;
     bpData: any;
-
-    preferences: Preferences;
+    weights: any = {};
+    weightOptions: any;
+    weightData: any;
+    eventSubscriber: Subscription;
 
     constructor(
         private principal: Principal,
@@ -56,14 +56,10 @@ export class HomeComponent implements OnInit, OnDestroy {
                 this.getUserData();
             });
         });
-        this.eventSubscriber = this.eventManager
-            .subscribe('pointsListModification', () => this.getUserData());
-        this.eventSubscriber = this.eventManager
-            .subscribe('bloodPressureListModification', () => this.getUserData());
-        this.eventSubscriber = this.eventManager
-            .subscribe('weightListModification', () => this.getUserData());
-        this.eventSubscriber = this.eventManager
-            .subscribe('preferencesListModification', () => this.getUserData());
+        this.eventSubscriber = this.eventManager.subscribe('pointsListModification', () => this.getUserData());
+        this.eventSubscriber = this.eventManager.subscribe('bloodPressureListModification', () => this.getUserData());
+        this.eventSubscriber = this.eventManager.subscribe('weightListModification', () => this.getUserData());
+        this.eventSubscriber = this.eventManager.subscribe('preferencesListModification', () => this.getUserData());
     }
 
     isAuthenticated() {
@@ -88,15 +84,13 @@ export class HomeComponent implements OnInit, OnDestroy {
             this.pointsService.thisWeek().subscribe((points: any) => {
                 points = points.json;
                 this.pointsThisWeek = points;
-                this.pointsPercentage =
-                    (points.points / this.preferences.weeklyGoals) * 100;
+                this.pointsPercentage = (points.points / this.preferences.weeklyGoals) * 100;
                 // calculate success, warning, or danger
                 if (points.points >= preferences.weeklyGoal) {
                     this.pointsThisWeek.progress = 'success';
                 } else if (points.points < 10) {
                     this.pointsThisWeek.progress = 'danger';
-                } else if (points.points > 10 &&
-                    points.points < this.preferences.weeklyGoals) {
+                } else if (points.points > 10 && points.points < this.preferences.weeklyGoals) {
                     this.pointsThisWeek.progress = 'warning';
                 }
             });
@@ -136,9 +130,7 @@ export class HomeComponent implements OnInit, OnDestroy {
                     color: '#03a9f4'
                 }];
                 // set y scale to be 10 more than max and min
-                this.bpOptions.chart.yDomain =
-                    [Math.min.apply(Math, lowerValues) - 10,
-                    Math.max.apply(Math, upperValues) + 10];
+                this.bpOptions.chart.yDomain = [Math.min.apply(Math, lowerValues) - 10, Math.max.apply(Math, upperValues) + 10];
             } else {
                 this.bpReadings.readings = [];
             }
