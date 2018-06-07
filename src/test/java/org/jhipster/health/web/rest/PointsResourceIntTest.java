@@ -53,354 +53,318 @@ import org.jhipster.health.repository.UserRepository;
 @SpringBootTest(classes = TwentyOnePointsApp.class)
 public class PointsResourceIntTest {
 
-    private static final LocalDate DEFAULT_DATE = LocalDate.ofEpochDay(0L);
-    private static final LocalDate UPDATED_DATE = LocalDate.now(ZoneId.systemDefault());
+	private static final LocalDate DEFAULT_DATE = LocalDate.ofEpochDay(0L);
+	private static final LocalDate UPDATED_DATE = LocalDate.now(ZoneId.systemDefault());
 
-    private static final Integer DEFAULT_EXERCISE = 1;
-    private static final Integer UPDATED_EXERCISE = 2;
+	private static final Integer DEFAULT_EXERCISE = 1;
+	private static final Integer UPDATED_EXERCISE = 2;
 
-    private static final Integer DEFAULT_MEALS = 1;
-    private static final Integer UPDATED_MEALS = 2;
+	private static final Integer DEFAULT_MEALS = 1;
+	private static final Integer UPDATED_MEALS = 2;
 
-    private static final Integer DEFAULT_ALCOHOL = 1;
-    private static final Integer UPDATED_ALCOHOL = 2;
+	private static final Integer DEFAULT_ALCOHOL = 1;
+	private static final Integer UPDATED_ALCOHOL = 2;
 
-    private static final String DEFAULT_NOTES = "AAAAAAAAAA";
-    private static final String UPDATED_NOTES = "BBBBBBBBBB";
+	private static final String DEFAULT_NOTES = "AAAAAAAAAA";
+	private static final String UPDATED_NOTES = "BBBBBBBBBB";
 
-    @Autowired
-    private PointsRepository pointsRepository;
+	@Autowired
+	private PointsRepository pointsRepository;
 
-    @Autowired
-    private PointsSearchRepository pointsSearchRepository;
+	@Autowired
+	private PointsSearchRepository pointsSearchRepository;
 
-    @Autowired
-    private MappingJackson2HttpMessageConverter jacksonMessageConverter;
+	@Autowired
+	private MappingJackson2HttpMessageConverter jacksonMessageConverter;
 
-    @Autowired
-    private PageableHandlerMethodArgumentResolver pageableArgumentResolver;
+	@Autowired
+	private PageableHandlerMethodArgumentResolver pageableArgumentResolver;
 
-    @Autowired
-    private ExceptionTranslator exceptionTranslator;
+	@Autowired
+	private ExceptionTranslator exceptionTranslator;
 
-    @Autowired
-    private EntityManager em;
+	@Autowired
+	private EntityManager em;
 
-    @Autowired
-    private UserRepository userRepository;
+	@Autowired
+	private UserRepository userRepository;
 
-    @Autowired
-    private WebApplicationContext context;
+	@Autowired
+	private WebApplicationContext context;
 
-    private MockMvc restPointsMockMvc;
+	private MockMvc restPointsMockMvc;
 
-    private Points points;
+	private Points points;
 
-    @Before
-    public void setup() {
-        MockitoAnnotations.initMocks(this);
+	@Before
+	public void setup() {
+		MockitoAnnotations.initMocks(this);
 
-        PointsResource pointsResource = new PointsResource(pointsRepository, pointsSearchRepository, userRepository);
-        this.restPointsMockMvc = MockMvcBuilders.standaloneSetup(pointsResource)
-            .setCustomArgumentResolvers(pageableArgumentResolver)
-            .setControllerAdvice(exceptionTranslator)
-        .setMessageConverters(jacksonMessageConverter).build();
-    }
+		PointsResource pointsResource = new PointsResource(pointsRepository, pointsSearchRepository, userRepository);
+		this.restPointsMockMvc = MockMvcBuilders.standaloneSetup(pointsResource)
+				.setCustomArgumentResolvers(pageableArgumentResolver).setControllerAdvice(exceptionTranslator)
+				.setMessageConverters(jacksonMessageConverter).build();
+	}
 
-    /**
-     * Create an entity for this test.
-     *
-     * This is a static method, as tests for other entities might also need it,
-     * if they test an entity which requires the current entity.
-     */
-    public static Points createEntity(EntityManager em) {
-        Points points = new Points()
-            .date(DEFAULT_DATE)
-            .exercise(DEFAULT_EXERCISE)
-            .meals(DEFAULT_MEALS)
-            .alcohol(DEFAULT_ALCOHOL)
-            .notes(DEFAULT_NOTES);
-        return points;
-    }
+	/**
+	 * Create an entity for this test.
+	 *
+	 * This is a static method, as tests for other entities might also need it, if
+	 * they test an entity which requires the current entity.
+	 */
+	public Points createEntity(EntityManager em) {
+		User user = userRepository.findOneByLogin("user").get();
 
-    @Before
-    public void initTest() {
-        pointsSearchRepository.deleteAll();
-        points = createEntity(em);
-    }
+		Points points = new Points().date(DEFAULT_DATE).exercise(DEFAULT_EXERCISE).meals(DEFAULT_MEALS)
+				.alcohol(DEFAULT_ALCOHOL).notes(DEFAULT_NOTES).user(user);
+		return points;
+	}
 
-    @Test
-    @Transactional
-    public void createPoints() throws Exception {
-        int databaseSizeBeforeCreate = pointsRepository.findAll().size();
+	@Before
+	public void initTest() {
+		pointsSearchRepository.deleteAll();
+		points = createEntity(em);
+	}
 
-        // Create security-aware mockMvc
-        restPointsMockMvc = MockMvcBuilders
-            .webAppContextSetup(context)
-            .apply(springSecurity())
-            .build();
+	@Test
+	@Transactional
+	public void createPoints() throws Exception {
+		int databaseSizeBeforeCreate = pointsRepository.findAll().size();
 
-        // Create the Points
-        restPointsMockMvc.perform(post("/api/points")
-            .with(user("user"))
-            .contentType(TestUtil.APPLICATION_JSON_UTF8)
-            .content(TestUtil.convertObjectToJsonBytes(points)))
-            .andExpect(status().isCreated());
+		// Create security-aware mockMvc
+		restPointsMockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 
-        // Validate the Points in the database
-        List<Points> pointsList = pointsRepository.findAll();
-        assertThat(pointsList).hasSize(databaseSizeBeforeCreate + 1);
-        Points testPoints = pointsList.get(pointsList.size() - 1);
-        assertThat(testPoints.getDate()).isEqualTo(DEFAULT_DATE);
-        assertThat(testPoints.getExercise()).isEqualTo(DEFAULT_EXERCISE);
-        assertThat(testPoints.getMeals()).isEqualTo(DEFAULT_MEALS);
-        assertThat(testPoints.getAlcohol()).isEqualTo(DEFAULT_ALCOHOL);
-        assertThat(testPoints.getNotes()).isEqualTo(DEFAULT_NOTES);
+		// Create the Points
+		restPointsMockMvc.perform(post("/api/points").with(user("user")).contentType(TestUtil.APPLICATION_JSON_UTF8)
+				.content(TestUtil.convertObjectToJsonBytes(points))).andExpect(status().isCreated());
 
-        // Validate the Points in Elasticsearch
-        Points pointsEs = pointsSearchRepository.findOne(testPoints.getId());
-        assertThat(pointsEs).isEqualToIgnoringGivenFields(testPoints);
-    }
+		// Validate the Points in the database
+		List<Points> pointsList = pointsRepository.findAll();
+		assertThat(pointsList).hasSize(databaseSizeBeforeCreate + 1);
+		Points testPoints = pointsList.get(pointsList.size() - 1);
+		assertThat(testPoints.getDate()).isEqualTo(DEFAULT_DATE);
+		assertThat(testPoints.getExercise()).isEqualTo(DEFAULT_EXERCISE);
+		assertThat(testPoints.getMeals()).isEqualTo(DEFAULT_MEALS);
+		assertThat(testPoints.getAlcohol()).isEqualTo(DEFAULT_ALCOHOL);
+		assertThat(testPoints.getNotes()).isEqualTo(DEFAULT_NOTES);
 
-    @Test
-    @Transactional
-    public void createPointsWithExistingId() throws Exception {
-        int databaseSizeBeforeCreate = pointsRepository.findAll().size();
+		// Validate the Points in Elasticsearch
+		Points pointsEs = pointsSearchRepository.findOne(testPoints.getId());
+		assertThat(pointsEs).isEqualToIgnoringGivenFields(testPoints);
+	}
 
-        // Create the Points with an existing ID
-        points.setId(1L);
+	@Test
+	@Transactional
+	public void createPointsWithExistingId() throws Exception {
+		int databaseSizeBeforeCreate = pointsRepository.findAll().size();
 
-        // An entity with an existing ID cannot be created, so this API call must fail
-        restPointsMockMvc.perform(post("/api/points")
-            .contentType(TestUtil.APPLICATION_JSON_UTF8)
-            .content(TestUtil.convertObjectToJsonBytes(points)))
-            .andExpect(status().isBadRequest());
+		// Create the Points with an existing ID
+		points.setId(1L);
 
-        // Validate the Points in the database
-        List<Points> pointsList = pointsRepository.findAll();
-        assertThat(pointsList).hasSize(databaseSizeBeforeCreate);
-    }
+		// An entity with an existing ID cannot be created, so this API call must fail
+		restPointsMockMvc.perform(post("/api/points").contentType(TestUtil.APPLICATION_JSON_UTF8)
+				.content(TestUtil.convertObjectToJsonBytes(points))).andExpect(status().isBadRequest());
 
-    @Test
-    @Transactional
-    public void checkDateIsRequired() throws Exception {
-        int databaseSizeBeforeTest = pointsRepository.findAll().size();
-        // set the field null
-        points.setDate(null);
+		// Validate the Points in the database
+		List<Points> pointsList = pointsRepository.findAll();
+		assertThat(pointsList).hasSize(databaseSizeBeforeCreate);
+	}
 
-        // Create the Points, which fails.
+	@Test
+	@Transactional
+	public void checkDateIsRequired() throws Exception {
+		int databaseSizeBeforeTest = pointsRepository.findAll().size();
+		// set the field null
+		points.setDate(null);
 
-        restPointsMockMvc.perform(post("/api/points")
-            .contentType(TestUtil.APPLICATION_JSON_UTF8)
-            .content(TestUtil.convertObjectToJsonBytes(points)))
-            .andExpect(status().isBadRequest());
+		// Create the Points, which fails.
 
-        List<Points> pointsList = pointsRepository.findAll();
-        assertThat(pointsList).hasSize(databaseSizeBeforeTest);
-    }
+		restPointsMockMvc.perform(post("/api/points").contentType(TestUtil.APPLICATION_JSON_UTF8)
+				.content(TestUtil.convertObjectToJsonBytes(points))).andExpect(status().isBadRequest());
 
-    @Test
-    @Transactional
-    public void getAllPoints() throws Exception {
-        // Initialize the database
-        pointsRepository.saveAndFlush(points);
+		List<Points> pointsList = pointsRepository.findAll();
+		assertThat(pointsList).hasSize(databaseSizeBeforeTest);
+	}
 
-        // Create security-aware mockMvc
-         restPointsMockMvc = MockMvcBuilders
-            .webAppContextSetup(context)
-            .apply(springSecurity())
-            .build();
+	@Test
+	@Transactional
+	public void getAllPoints() throws Exception {
+		// Initialize the database
+		pointsRepository.saveAndFlush(points);
 
-        // Get all the pointsList
-        restPointsMockMvc.perform(get("/api/points?sort=id,desc")
-            .with(user("admin").roles("ADMIN")))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(points.getId().intValue())))
-            .andExpect(jsonPath("$.[*].date").value(hasItem(DEFAULT_DATE.toString())))
-            .andExpect(jsonPath("$.[*].exercise").value(hasItem(DEFAULT_EXERCISE)))
-            .andExpect(jsonPath("$.[*].meals").value(hasItem(DEFAULT_MEALS)))
-            .andExpect(jsonPath("$.[*].alcohol").value(hasItem(DEFAULT_ALCOHOL)))
-            .andExpect(jsonPath("$.[*].notes").value(hasItem(DEFAULT_NOTES.toString())));
-    }
+		// Create security-aware mockMvc
+		restPointsMockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 
-    @Test
-    @Transactional
-    public void getPoints() throws Exception {
-        // Initialize the database
-        pointsRepository.saveAndFlush(points);
+		// Get all the pointsList
+		restPointsMockMvc.perform(get("/api/points?sort=id,desc").with(user("admin").roles("ADMIN")))
+				.andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+				.andExpect(jsonPath("$.[*].id").value(hasItem(points.getId().intValue())))
+				.andExpect(jsonPath("$.[*].date").value(hasItem(DEFAULT_DATE.toString())))
+				.andExpect(jsonPath("$.[*].exercise").value(hasItem(DEFAULT_EXERCISE)))
+				.andExpect(jsonPath("$.[*].meals").value(hasItem(DEFAULT_MEALS)))
+				.andExpect(jsonPath("$.[*].alcohol").value(hasItem(DEFAULT_ALCOHOL)))
+				.andExpect(jsonPath("$.[*].notes").value(hasItem(DEFAULT_NOTES.toString())));
+	}
 
-        // Get the points
-        restPointsMockMvc.perform(get("/api/points/{id}", points.getId()))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
-            .andExpect(jsonPath("$.id").value(points.getId().intValue()))
-            .andExpect(jsonPath("$.date").value(DEFAULT_DATE.toString()))
-            .andExpect(jsonPath("$.exercise").value(DEFAULT_EXERCISE))
-            .andExpect(jsonPath("$.meals").value(DEFAULT_MEALS))
-            .andExpect(jsonPath("$.alcohol").value(DEFAULT_ALCOHOL))
-            .andExpect(jsonPath("$.notes").value(DEFAULT_NOTES.toString()));
-    }
+	@Test
+	@Transactional
+	public void getPoints() throws Exception {
+		// Initialize the database
+		pointsRepository.saveAndFlush(points);
 
-    @Test
-    @Transactional
-    public void getNonExistingPoints() throws Exception {
-        // Get the points
-        restPointsMockMvc.perform(get("/api/points/{id}", Long.MAX_VALUE))
-            .andExpect(status().isNotFound());
-    }
+		// Get the points
+		restPointsMockMvc.perform(get("/api/points/{id}", points.getId())).andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+				.andExpect(jsonPath("$.id").value(points.getId().intValue()))
+				.andExpect(jsonPath("$.date").value(DEFAULT_DATE.toString()))
+				.andExpect(jsonPath("$.exercise").value(DEFAULT_EXERCISE))
+				.andExpect(jsonPath("$.meals").value(DEFAULT_MEALS))
+				.andExpect(jsonPath("$.alcohol").value(DEFAULT_ALCOHOL))
+				.andExpect(jsonPath("$.notes").value(DEFAULT_NOTES.toString()));
+	}
 
-    @Test
-    @Transactional
-    public void updatePoints() throws Exception {
-        // Initialize the database
-        pointsRepository.saveAndFlush(points);
-        pointsSearchRepository.save(points);
-        int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
+	@Test
+	@Transactional
+	public void getNonExistingPoints() throws Exception {
+		// Get the points
+		restPointsMockMvc.perform(get("/api/points/{id}", Long.MAX_VALUE)).andExpect(status().isNotFound());
+	}
 
-        // Update the points
-        Points updatedPoints = pointsRepository.findOne(points.getId());
-        // Disconnect from session so that the updates on updatedPoints are not directly saved in db
-        em.detach(updatedPoints);
-        updatedPoints
-            .date(UPDATED_DATE)
-            .exercise(UPDATED_EXERCISE)
-            .meals(UPDATED_MEALS)
-            .alcohol(UPDATED_ALCOHOL)
-            .notes(UPDATED_NOTES);
+	@Test
+	@Transactional
+	public void updatePoints() throws Exception {
+		// Initialize the database
+		pointsRepository.saveAndFlush(points);
+		pointsSearchRepository.save(points);
+		int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
 
-        restPointsMockMvc.perform(put("/api/points")
-            .contentType(TestUtil.APPLICATION_JSON_UTF8)
-            .content(TestUtil.convertObjectToJsonBytes(updatedPoints)))
-            .andExpect(status().isOk());
+		// Update the points
+		Points updatedPoints = pointsRepository.findOne(points.getId());
+		// Disconnect from session so that the updates on updatedPoints are not directly
+		// saved in db
+		em.detach(updatedPoints);
+		updatedPoints.date(UPDATED_DATE).exercise(UPDATED_EXERCISE).meals(UPDATED_MEALS).alcohol(UPDATED_ALCOHOL)
+				.notes(UPDATED_NOTES);
 
-        // Validate the Points in the database
-        List<Points> pointsList = pointsRepository.findAll();
-        assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
-        Points testPoints = pointsList.get(pointsList.size() - 1);
-        assertThat(testPoints.getDate()).isEqualTo(UPDATED_DATE);
-        assertThat(testPoints.getExercise()).isEqualTo(UPDATED_EXERCISE);
-        assertThat(testPoints.getMeals()).isEqualTo(UPDATED_MEALS);
-        assertThat(testPoints.getAlcohol()).isEqualTo(UPDATED_ALCOHOL);
-        assertThat(testPoints.getNotes()).isEqualTo(UPDATED_NOTES);
+		restPointsMockMvc.perform(put("/api/points").contentType(TestUtil.APPLICATION_JSON_UTF8)
+				.content(TestUtil.convertObjectToJsonBytes(updatedPoints))).andExpect(status().isOk());
 
-        // Validate the Points in Elasticsearch
-        Points pointsEs = pointsSearchRepository.findOne(testPoints.getId());
-        assertThat(pointsEs).isEqualToIgnoringGivenFields(testPoints);
-    }
+		// Validate the Points in the database
+		List<Points> pointsList = pointsRepository.findAll();
+		assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
+		Points testPoints = pointsList.get(pointsList.size() - 1);
+		assertThat(testPoints.getDate()).isEqualTo(UPDATED_DATE);
+		assertThat(testPoints.getExercise()).isEqualTo(UPDATED_EXERCISE);
+		assertThat(testPoints.getMeals()).isEqualTo(UPDATED_MEALS);
+		assertThat(testPoints.getAlcohol()).isEqualTo(UPDATED_ALCOHOL);
+		assertThat(testPoints.getNotes()).isEqualTo(UPDATED_NOTES);
 
-    @Test
-    @Transactional
-    public void updateNonExistingPoints() throws Exception {
-        int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
+		// Validate the Points in Elasticsearch
+		Points pointsEs = pointsSearchRepository.findOne(testPoints.getId());
+		assertThat(pointsEs).isEqualToIgnoringGivenFields(testPoints);
+	}
 
-        // Create the Points
+	@Test
+	@Transactional
+	public void updateNonExistingPoints() throws Exception {
+		int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
 
-        // If the entity doesn't have an ID, it will be created instead of just being updated
-        restPointsMockMvc.perform(put("/api/points")
-            .contentType(TestUtil.APPLICATION_JSON_UTF8)
-            .content(TestUtil.convertObjectToJsonBytes(points)))
-            .andExpect(status().isCreated());
+		// Create the Points
 
-        // Validate the Points in the database
-        List<Points> pointsList = pointsRepository.findAll();
-        assertThat(pointsList).hasSize(databaseSizeBeforeUpdate + 1);
-    }
+		// If the entity doesn't have an ID, it will be created instead of just being
+		// updated
+		restPointsMockMvc.perform(put("/api/points").contentType(TestUtil.APPLICATION_JSON_UTF8)
+				.content(TestUtil.convertObjectToJsonBytes(points))).andExpect(status().isCreated());
 
-    @Test
-    @Transactional
-    public void deletePoints() throws Exception {
-        // Initialize the database
-        pointsRepository.saveAndFlush(points);
-        pointsSearchRepository.save(points);
-        int databaseSizeBeforeDelete = pointsRepository.findAll().size();
+		// Validate the Points in the database
+		List<Points> pointsList = pointsRepository.findAll();
+		assertThat(pointsList).hasSize(databaseSizeBeforeUpdate + 1);
+	}
 
-        // Get the points
-        restPointsMockMvc.perform(delete("/api/points/{id}", points.getId())
-            .accept(TestUtil.APPLICATION_JSON_UTF8))
-            .andExpect(status().isOk());
+	@Test
+	@Transactional
+	public void deletePoints() throws Exception {
+		// Initialize the database
+		pointsRepository.saveAndFlush(points);
+		pointsSearchRepository.save(points);
+		int databaseSizeBeforeDelete = pointsRepository.findAll().size();
 
-        // Validate Elasticsearch is empty
-        boolean pointsExistsInEs = pointsSearchRepository.exists(points.getId());
-        assertThat(pointsExistsInEs).isFalse();
+		// Get the points
+		restPointsMockMvc.perform(delete("/api/points/{id}", points.getId()).accept(TestUtil.APPLICATION_JSON_UTF8))
+				.andExpect(status().isOk());
 
-        // Validate the database is empty
-        List<Points> pointsList = pointsRepository.findAll();
-        assertThat(pointsList).hasSize(databaseSizeBeforeDelete - 1);
-    }
+		// Validate Elasticsearch is empty
+		boolean pointsExistsInEs = pointsSearchRepository.exists(points.getId());
+		assertThat(pointsExistsInEs).isFalse();
 
-    @Test
-    @Transactional
-    public void searchPoints() throws Exception {
-        // Initialize the database
-        pointsRepository.saveAndFlush(points);
-        pointsSearchRepository.save(points);
+		// Validate the database is empty
+		List<Points> pointsList = pointsRepository.findAll();
+		assertThat(pointsList).hasSize(databaseSizeBeforeDelete - 1);
+	}
 
-        // Search the points
-        restPointsMockMvc.perform(get("/api/_search/points?query=id:" + points.getId()))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(points.getId().intValue())))
-            .andExpect(jsonPath("$.[*].date").value(hasItem(DEFAULT_DATE.toString())))
-            .andExpect(jsonPath("$.[*].exercise").value(hasItem(DEFAULT_EXERCISE)))
-            .andExpect(jsonPath("$.[*].meals").value(hasItem(DEFAULT_MEALS)))
-            .andExpect(jsonPath("$.[*].alcohol").value(hasItem(DEFAULT_ALCOHOL)))
-            .andExpect(jsonPath("$.[*].notes").value(hasItem(DEFAULT_NOTES.toString())));
-    }
+	@Test
+	@Transactional
+	public void searchPoints() throws Exception {
+		// Initialize the database
+		pointsRepository.saveAndFlush(points);
+		pointsSearchRepository.save(points);
 
-    @Test
-    @Transactional
-    public void equalsVerifier() throws Exception {
-        TestUtil.equalsVerifier(Points.class);
-        Points points1 = new Points();
-        points1.setId(1L);
-        Points points2 = new Points();
-        points2.setId(points1.getId());
-        assertThat(points1).isEqualTo(points2);
-        points2.setId(2L);
-        assertThat(points1).isNotEqualTo(points2);
-        points1.setId(null);
-        assertThat(points1).isNotEqualTo(points2);
-    }
+		// Search the points
+		restPointsMockMvc.perform(get("/api/_search/points?query=id:" + points.getId())).andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+				.andExpect(jsonPath("$.[*].id").value(hasItem(points.getId().intValue())))
+				.andExpect(jsonPath("$.[*].date").value(hasItem(DEFAULT_DATE.toString())))
+				.andExpect(jsonPath("$.[*].exercise").value(hasItem(DEFAULT_EXERCISE)))
+				.andExpect(jsonPath("$.[*].meals").value(hasItem(DEFAULT_MEALS)))
+				.andExpect(jsonPath("$.[*].alcohol").value(hasItem(DEFAULT_ALCOHOL)))
+				.andExpect(jsonPath("$.[*].notes").value(hasItem(DEFAULT_NOTES.toString())));
+	}
 
-    private void createPointsByWeek(LocalDate thisMonday, LocalDate lastMonday) {
-        User user = userRepository.findOneByLogin("user").get();
-        // Create points in two separate weeks
-        points = new Points(thisMonday.plusDays(2), 1, 1, 1, user);
-        pointsRepository.saveAndFlush(points);
-        points = new Points(thisMonday.plusDays(3), 1, 1, 0, user);
-        pointsRepository.saveAndFlush(points);
-        points = new Points(lastMonday.plusDays(3), 0, 0, 1, user);
-        pointsRepository.saveAndFlush(points);
-        points = new Points(lastMonday.plusDays(4), 1, 1, 0, user);
-        pointsRepository.saveAndFlush(points);
-    }
+	@Test
+	@Transactional
+	public void equalsVerifier() throws Exception {
+		TestUtil.equalsVerifier(Points.class);
+		Points points1 = new Points();
+		points1.setId(1L);
+		Points points2 = new Points();
+		points2.setId(points1.getId());
+		assertThat(points1).isEqualTo(points2);
+		points2.setId(2L);
+		assertThat(points1).isNotEqualTo(points2);
+		points1.setId(null);
+		assertThat(points1).isNotEqualTo(points2);
+	}
 
-    @Test
-    @Transactional
-    public void getPointsThisWeek() throws Exception {
-        LocalDate today = LocalDate.now();
-        LocalDate thisMonday = today.with(DayOfWeek.MONDAY);
-        LocalDate lastMonday = thisMonday.minusWeeks(1);
-        createPointsByWeek(thisMonday, lastMonday);
+	private void createPointsByWeek(LocalDate thisMonday, LocalDate lastMonday) {
+		User user = userRepository.findOneByLogin("user").get();
+		// Create points in two separate weeks
+		points = new Points(thisMonday.plusDays(2), 1, 1, 1, user);
+		pointsRepository.saveAndFlush(points);
+		points = new Points(thisMonday.plusDays(3), 1, 1, 0, user);
+		pointsRepository.saveAndFlush(points);
+		points = new Points(lastMonday.plusDays(3), 0, 0, 1, user);
+		pointsRepository.saveAndFlush(points);
+		points = new Points(lastMonday.plusDays(4), 1, 1, 0, user);
+		pointsRepository.saveAndFlush(points);
+	}
 
-        // create security-aware mockMvc
-        restPointsMockMvc = MockMvcBuilders
-            .webAppContextSetup(context)
-            .apply(springSecurity())
-            .build();
-        // Get all the points
-        restPointsMockMvc.perform(get("/api/points")
-            .with(user("user").roles("USER")))
-            .andExpect(status().isOk())
-            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$", hasSize(4)));
-        // Get the points for this week only
-        restPointsMockMvc.perform(get("/api/points-this-week")
-            .with(user("user").roles("USER")))
-            .andExpect(status().isOk())
-            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.week").value(thisMonday.toString()))
-            .andExpect(jsonPath("$.points").value(5));
-    }
+	@Test
+	@Transactional
+	public void getPointsThisWeek() throws Exception {
+		LocalDate today = LocalDate.now();
+		LocalDate thisMonday = today.with(DayOfWeek.MONDAY);
+		LocalDate lastMonday = thisMonday.minusWeeks(1);
+		createPointsByWeek(thisMonday, lastMonday);
+
+		// create security-aware mockMvc
+		restPointsMockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+		// Get all the points
+		restPointsMockMvc.perform(get("/api/points").with(user("user").roles("USER"))).andExpect(status().isOk())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$", hasSize(4)));
+		// Get the points for this week only
+		restPointsMockMvc.perform(get("/api/points-this-week").with(user("user").roles("USER")))
+				.andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$.week").value(thisMonday.toString())).andExpect(jsonPath("$.points").value(5));
+	}
 }
